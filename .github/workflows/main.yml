@@ -35,7 +35,7 @@ jobs:
           status=$(echo "$response" | jq -r '
             [.data[]? | select(.audiName == "ORA 5")] as $m
             | if   ($m | length) == 0                       then "missing"
-              elif any($m[]; (.componentList | length) == 1) then "match"
+              elif any($m[]; (.componentList | length) == 2) then "match"
               else "nomatch"
               end')
 
