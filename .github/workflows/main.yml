@@ -32,7 +32,7 @@ jobs:
 
           echo "$response" | jq . >/dev/null || { echo "Non-JSON response — likely blocked/expired:"; echo "$response" | head -c 500; exit 1; }
 
-          result=$(echo "$response" | jq -r 'any(.data[]?; .audiName == "ORA 5" and (.componentList | length) == 1)')
+          result=$(echo "$response" | jq -r 'any(.data[]?; .audiName == "ORA 5" and (.componentList | length) == 2)')
           echo "result=$result"
           echo "result=$result" >> "$GITHUB_OUTPUT"
 
