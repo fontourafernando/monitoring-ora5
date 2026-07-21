@@ -2,13 +2,12 @@
 name: ora5-monitor
 on:
   schedule:
-    - cron: '1/10 * * * *'   # every 10 min (GitHub may delay a few min under load)
-  workflow_dispatch:          # manual "Run workflow" button for testing
+    - cron: '1/10 * * * *'
+  workflow_dispatch:
 
 jobs:
   check:
-    runs-on: ubuntu-latest    # jq is preinstalled here
-    environment: TG_TOKEN
+    runs-on: ubuntu-latest
     steps:
       - name: Query and evaluate
         id: check
@@ -32,12 +31,29 @@ jobs:
 
           echo "$response" | jq . >/dev/null || { echo "Non-JSON response — likely blocked/expired:"; echo "$response" | head -c 500; exit 1; }
 
-          result=$(echo "$response" | jq -r 'any(.data[]?; .audiName == "ORA 5" and (.componentList | length) == 2)')
-          echo "result=$result"
-          echo "result=$result" >> "$GITHUB_OUTPUT"
+          status=$(echo "$response" | jq -r '
+            [.data[]? | select(.audiName == "ORA 6")] as $m
+            | if   ($m | length) == 0                       then "missing"
+              elif any($m[]; (.componentList | length) == 2) then "match"
+              else "nomatch"
+              end')
 
-      - name: Notify via Telegram
-        if: steps.check.outputs.result == 'true'
+          echo "status=$status"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Notify — ORA 5 missing
+        if: steps.check.outputs.status == 'missing'
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+            -d chat_id="${TG_CHAT_ID}" \
+            -d parse_mode=HTML \
+            -d text='⚠️ <b>ORA 5 not found</b> in the response — the listing or its structure may have changed. Worth checking manually.'
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+
+      - name: Notify — ORA 5 has 2 components
+        if: steps.check.outputs.status == 'match'
         run: |
           curl -s -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
             -d chat_id="${TG_CHAT_ID}" \
