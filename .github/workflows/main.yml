@@ -1,0 +1,47 @@
+# .github/workflows/ora5-monitor.yml
+name: ora5-monitor
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # every 10 min (GitHub may delay a few min under load)
+  workflow_dispatch:          # manual "Run workflow" button for testing
+
+jobs:
+  check:
+    runs-on: ubuntu-latest    # jq is preinstalled here
+    steps:
+      - name: Query and evaluate
+        id: check
+        run: |
+          response=$(curl -s 'https://loja.gwmmotors.com.br/brazil-official-commerce/brazil-official-gateway/goodsmanage/api/v1.0/page/queryPageDetailByComponentId?componentId=1907153902618869762&pageId=PA010420250001' \
+            -H 'accept: */*' \
+            -H 'accept-language: en-US,en;q=0.9' \
+            -H 'accesstoken;' \
+            -H 'appid: 6' \
+            -H 'brand: 6' \
+            -H 'brandid: CCZ001' \
+            -H 'country: BR' \
+            -H 'devicetype: 0' \
+            -H 'enterpriseid: CC01' \
+            -H 'gwid;' \
+            -H 'language: pt_BR' \
+            -H 'rs: 5' \
+            -H 'terminal: GW_PC_GWM' \
+            -H 'referer: https://loja.gwmmotors.com.br/brazil-official-commerce/' \
+            -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36')
+
+          echo "$response" | jq . >/dev/null || { echo "Non-JSON response — likely blocked/expired:"; echo "$response" | head -c 500; exit 1; }
+
+          result=$(echo "$response" | jq -r 'any(.data[]?; .audiName == "ORA 5" and (.componentList | length) == 2)')
+          echo "result=$result"
+          echo "result=$result" >> "$GITHUB_OUTPUT"
+
+      - name: Notify via Telegram
+        if: steps.check.outputs.result == 'true'
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+            -d chat_id="${TG_CHAT_ID}" \
+            -d parse_mode=HTML \
+            -d text='🚗 <b>ORA 5</b> now has 2 components — <a href="https://www.mercadolivre.com.br/carros-novos/greatwall-motors/ora/5/exclusive/2026">check the listing</a>'
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
