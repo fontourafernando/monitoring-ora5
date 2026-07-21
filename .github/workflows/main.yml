@@ -8,6 +8,7 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest    # jq is preinstalled here
+    environment: TG_TOKEN
     steps:
       - name: Query and evaluate
         id: check
