@@ -2,7 +2,7 @@
 name: ora5-monitor
 on:
   schedule:
-    - cron: '*/10 * * * *'   # every 10 min (GitHub may delay a few min under load)
+    - cron: '1/10 * * * *'   # every 10 min (GitHub may delay a few min under load)
   workflow_dispatch:          # manual "Run workflow" button for testing
 
 jobs:
